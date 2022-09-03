@@ -33,8 +33,10 @@ else:
         "clientId": args.client_id,
         "clientSecret": args.client_secret,
         "resourceGroup": args.resource_group,
-        "zoneName": args.zone,
-        "recordName": args.record,
+        "zones": {
+            "name": args.zone,
+            "records": [args.record]
+        }
     }
 
 if (
@@ -53,21 +55,23 @@ def update_dns(ip: str):
     dns_client = DnsManagementClient(
         credentials, subscription_id=config["subscriptionId"]
     )
-    record_set = dns_client.record_sets.create_or_update(
-        config["resourceGroup"],
-        config["zoneName"],
-        config["recordName"],
-        "A",
-        {
-            "ttl": 300,
-            "arecords": [{"ipv4_address": ip}],
-            "metadata": {
-                "createdBy": "azure-dyndns (python)",
-                "updated": datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
-            },
-        },
-    )
-    print(f"{record_set.fqdn} - {ip} - {record_set.provisioning_state}")
+    for zone in config["zones"]:
+        for record in zone["records"]:
+            record_set = dns_client.record_sets.create_or_update(
+                config["resourceGroup"],
+                zone["name"],
+                record,
+                "A",
+                {
+                    "ttl": 300,
+                    "arecords": [{"ipv4_address": ip}],
+                    "metadata": {
+                        "createdBy": "azure-dyndns (python)",
+                        "updated": datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+                    },
+                },
+            )
+            print(f"{record_set.fqdn} - {ip} - {record_set.provisioning_state}")
 
 
 def get_external_ip():
